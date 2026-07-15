@@ -6,6 +6,10 @@
 
 ---
 
+![Main Interface](screenshots/main-interface.png)
+
+---
+
 ## Overview
 
 SafeView Video Player is an advanced browser-based video player designed for viewing videos with professional image enhancement tools and intelligent exposure correction.
@@ -366,5 +370,3 @@ Email: vinayak.chronicles@outlook.com
 ## Acknowledgements
 
 SafeView was built as an experimental browser-based video processing application demonstrating what modern web technologies such as WebGL, HTML5 Canvas, and Web Workers can achieve for real-time video enhancement without requiring native desktop software. 
-
----
