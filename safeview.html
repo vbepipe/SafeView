@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<!-- 
+  ////////////////////////////////////////////////////////
+  // SafeView Video Player By Vinayak Patel
+  // Developed By Vinayak Patel
+  // Email: vinayak.chronicles@outlook.com 
+  // Copyright © 2026 Vinayak Patel. All rights reserved.
+  // Permission is granted to individuals to use this software for personal, non-commercial purposes only.
+  // You may not:
+    // - use this software commercially;
+    // - modify, adapt, or create derivative works;
+    // - redistribute the software or source code;
+    // - sublicense or sell this software;
+    // - claim authorship or remove copyright notices. 
+  // You may not reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code except where prohibited by applicable law.
+  //////////////////////////////////////////////////////// 
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SafeView Video Player By Vinayak Patel</title>
+<style>
+  :root{
+    --bg:#14161a;
+    --panel:#1b1e24;
+    --panel-2:#20242c;
+    --panel-3:#262b34;
+    --border:#2a2e37;
+    --border-soft:#23262e;
+    --text:#e8e6e1;
+    --text-muted:#8b92a0;
+    --text-dim:#5c6270;
+    --amber:#ffb000;
+    --amber-dim:#7a5a12;
+    --cyan:#5eead4;
+    --cyan-dim:#2a5a52;
+    --red:#ff5f56;
+    --green:#5fd97a;
+    --font-display:'Space Grotesk',sans-serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:radial-gradient(circle at 15% 0%, #1a1d24 0%, var(--bg) 45%);
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--amber-dim);color:var(--text);}
+  button{font-family:inherit;cursor:pointer;}
+  input[type=range]{cursor:pointer;}
+
+  /* ---------- topbar ---------- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 22px;border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);}
+  .brand h1{font-family:var(--font-display);font-size:16px;font-weight:600;letter-spacing:0.02em;margin:0;}
+  .brand .sub{font-family:var(--font-mono);font-size:10.5px;color:var(--text-dim);letter-spacing:0.06em;text-transform:uppercase;margin-left:6px;}
+  .topbar-actions{display:flex;gap:10px;align-items:center;}
+
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;
+    background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:8px 14px;border-radius:var(--radius);font-size:13px;font-weight:500;
+    transition:border-color .15s, background .15s;
+  }
+  .btn:hover{border-color:#3a4050;background:var(--panel-3);}
+  .btn:active{transform:translateY(1px);}
+  .btn.primary{background:var(--amber);color:#171207;border-color:var(--amber);font-weight:600;}
+  .btn.primary:hover{background:#ffc233;}
+  .btn:disabled{opacity:.35;cursor:not-allowed;}
+  .btn.icon{padding:8px 10px;}
+  .btn.toggle{background:var(--panel-2);}
+  .btn.toggle.active{background:var(--amber);color:#171207;border-color:var(--amber);font-weight:600;}
+
+  /* ---------- layout ---------- */
+  .layout{display:flex;gap:18px;padding:20px 22px;align-items:flex-start;flex-wrap:wrap;}
+  .stage-col{flex:1 1 620px;min-width:340px;display:flex;flex-direction:column;gap:14px;}
+  .side-col{flex:0 0 380px;min-width:320px;display:flex;flex-direction:column;gap:14px;}
+
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border-soft);background:var(--panel-2);}
+  .panel-head h2{font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.11em;text-transform:uppercase;color:var(--text-muted);margin:0;font-weight:600;}
+  .panel-body{padding:14px;}
+
+  /* ---------- stage ---------- */
+  .stage{position:relative;background:#000;aspect-ratio:16/9;border-radius:10px 10px 0 0;overflow:hidden;}
+  .stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000;display:none;}
+  .stage .empty-state{
+    position:absolute;inset:0;color:var(--text-dim);font-family:var(--font-mono);font-size:12px;text-align:center;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  }
+  .stage .empty-state svg{opacity:.5;}
+  .analysis-overlay{position:absolute;inset:0;background:rgba(10,11,14,0.86);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-family:var(--font-mono);z-index:5;}
+  .analysis-overlay.hidden{display:none;}
+  .scan-3x3{display:grid;grid-template-columns:repeat(3,14px);grid-template-rows:repeat(3,14px);gap:3px;}
+  .scan-3x3 span{background:var(--panel-3);border-radius:2px;transition:background .1s;}
+  .analysis-label{color:var(--amber);font-size:11px;letter-spacing:.08em;text-transform:uppercase;}
+  .analysis-progress-track{width:220px;height:3px;background:var(--panel-3);border-radius:2px;overflow:hidden;}
+  .analysis-progress-fill{height:100%;width:0%;background:var(--amber);box-shadow:0 0 6px var(--amber);transition:width .08s linear;}
+  .analysis-meta{color:var(--text-dim);font-size:10.5px;}
+
+  .bg-planning-strip{
+    display:none;align-items:center;gap:8px;padding:6px 14px;font-family:var(--font-mono);font-size:10px;color:var(--text-dim);
+    border-bottom:1px solid var(--border-soft);background:var(--panel-2);
+  }
+  .bg-planning-strip.show{display:flex;}
+  .bg-planning-strip .pulse{width:6px;height:6px;border-radius:50%;background:var(--amber);box-shadow:0 0 6px var(--amber);animation:pulse 1.1s infinite ease-in-out;}
+  @keyframes pulse{0%,100%{opacity:.35;}50%{opacity:1;}}
+
+  /* ---------- transport ---------- */
+  .transport{padding:12px 14px;display:flex;flex-direction:column;gap:10px;}
+  .seekbar-row{display:flex;align-items:center;gap:10px;}
+  .time-label{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);min-width:48px;text-align:center;}
+  .seek-wrap{position:relative;flex:1;height:14px;display:flex;align-items:center;}
+  .seek-frontier{position:absolute;left:0;top:5px;height:4px;border-radius:2px;background:rgba(255,176,0,0.20);width:0%;pointer-events:none;}
+  input[type=range].seek{
+    position:relative;z-index:1;width:100%;appearance:none;height:4px;border-radius:2px;background:transparent;outline:none;
+  }
+  input[type=range].seek::-webkit-slider-runnable-track{height:4px;border-radius:2px;background:var(--panel-3);}
+  input[type=range].seek::-webkit-slider-thumb{
+    appearance:none;width:12px;height:12px;border-radius:50%;background:var(--amber);
+    box-shadow:0 0 0 3px rgba(255,176,0,0.18);margin-top:-4px;
+  }
+  input[type=range].seek::-moz-range-track{height:4px;border-radius:2px;background:var(--panel-3);}
+  input[type=range].seek::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--amber);border:none;}
+  .controls-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+  .transport-btns{display:flex;gap:6px;align-items:center;}
+  .transport-btns .btn{padding:8px 11px;}
+
+  /* ---------- transport icon buttons ---------- */
+  .tbtn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:36px;height:36px;padding:0;border-radius:50%;
+    background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    transition:border-color .15s, background .15s, transform .1s;
+  }
+  .tbtn svg{width:16px;height:16px;display:block;pointer-events:none;}
+  .tbtn:hover{border-color:#3a4050;background:var(--panel-3);}
+  .tbtn:active{transform:scale(.93);}
+  .tbtn:disabled{opacity:.35;cursor:not-allowed;}
+  .tbtn.play-toggle{width:44px;height:44px;background:var(--amber);color:#171207;border-color:var(--amber);}
+  .tbtn.play-toggle:hover{background:#ffc233;}
+  .tbtn.play-toggle svg{width:18px;height:18px;}
+
+  /* ---------- volume control ---------- */
+  .volume-group{display:flex;align-items:center;gap:8px;}
+  .vol-slider-wrap{width:0;overflow:hidden;transition:width .18s ease;}
+  .volume-group:hover .vol-slider-wrap, .volume-group.active .vol-slider-wrap{width:80px;}
+  input[type=range].vol{width:76px;appearance:none;height:3px;border-radius:2px;background:var(--panel-3);outline:none;}
+  input[type=range].vol::-webkit-slider-thumb{appearance:none;width:11px;height:11px;border-radius:50%;background:var(--text);border:2px solid var(--panel);margin-top:-4px;}
+  input[type=range].vol::-moz-range-thumb{width:9px;height:9px;border-radius:50%;background:var(--text);border:none;}
+
+  /* ---------- select / dropdown ---------- */
+  select.dd{
+    width:100%;appearance:none;-webkit-appearance:none;
+    background:var(--panel-2) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="%238b92a0" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat right 10px center;
+    border:1px solid var(--border);color:var(--text);padding:8px 30px 8px 10px;border-radius:var(--radius);
+    font-size:12.5px;font-family:inherit;
+  }
+  select.dd:focus{outline:none;border-color:#3a4050;}
+  .custom-res-row{display:flex;gap:8px;margin-top:8px;}
+  .custom-res-row input[type=number]{
+    width:100%;background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:7px 8px;border-radius:var(--radius);font-size:12px;font-family:var(--font-mono);
+  }
+  .custom-res-row input[type=number]:focus{outline:none;border-color:#3a4050;}
+
+  /* ---------- noise reduction & add noise ---------- */
+  .nr-toggle-row{display:flex;align-items:center;justify-content:space-between;}
+  .switch{position:relative;width:34px;height:19px;flex-shrink:0;}
+  .switch input{opacity:0;width:0;height:0;position:absolute;}
+  .switch .track{position:absolute;inset:0;background:var(--panel-3);border:1px solid var(--border);border-radius:20px;transition:background .15s;}
+  .switch .track::before{content:'';position:absolute;width:13px;height:13px;left:2px;top:2px;border-radius:50%;background:var(--text-muted);transition:transform .15s, background .15s;}
+  .switch input:checked + .track{background:var(--amber-dim);border-color:var(--amber);}
+  .switch input:checked + .track::before{transform:translateX(15px);background:var(--amber);}
+  .nr-body{display:flex;flex-direction:column;gap:12px;margin-top:12px;}
+  .nr-body.disabled{opacity:.4;pointer-events:none;}
+  .topbar-toggle{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-muted);padding:0 4px;}
+  .perf-mode .pulse{animation:none !important;opacity:1;}
+  .perf-mode .scan-3x3 span{transition:none !important;}
+  .perf-mode .analysis-progress-fill{transition:none !important;}
+
+  /* ---------- side panel tabs ---------- */
+  .tabs{display:flex;border-bottom:1px solid var(--border-soft);background:var(--panel-2);}
+  .tab{flex:1;padding:10px 8px;text-align:center;font-family:var(--font-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);border-bottom:2px solid transparent;background:transparent;border-top:none;border-left:none;border-right:none;}
+  .tab.active{color:var(--amber);border-bottom-color:var(--amber);}
+
+  .field{margin-bottom:14px;}
+  .field:last-child{margin-bottom:0;}
+  .field-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+  .field-row label{font-size:12px;color:var(--text);font-weight:500;}
+  .field-row .val{font-family:var(--font-mono);font-size:11.5px;color:var(--amber);}
+  input[type=range].slider{width:100%;appearance:none;height:3px;border-radius:2px;background:var(--panel-3);outline:none;}
+  input[type=range].slider::-webkit-slider-thumb{appearance:none;width:13px;height:13px;border-radius:50%;background:var(--text);border:2px solid var(--panel);box-shadow:0 0 0 1px var(--border);margin-top:-5px;}
+  input[type=range].slider::-moz-range-thumb{width:11px;height:11px;border-radius:50%;background:var(--text);border:none;}
+  .hint{font-size:10.5px;color:var(--text-dim);line-height:1.5;margin-top:4px;}
+  .reset-link{font-family:var(--font-mono);font-size:10px;color:var(--text-dim);text-decoration:underline;text-underline-offset:2px;background:none;border:none;padding:0;}
+  .reset-link:hover{color:var(--amber);}
+
+  .segmented{display:flex;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .segmented button{flex:1;padding:8px 6px;background:var(--panel-2);color:var(--text-muted);border:none;font-size:11.5px;font-weight:500;border-right:1px solid var(--border);}
+  .segmented button:last-child{border-right:none;}
+  .segmented button.active{background:var(--amber);color:#171207;font-weight:600;}
+
+  /* ---------- luma readouts ---------- */
+  .luma-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .luma-card{background:var(--panel-2);border:1px solid var(--border-soft);border-radius:8px;padding:10px 12px;}
+  .luma-card .lc-label{font-family:var(--font-mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+  .lc-label .swatch{width:7px;height:7px;border-radius:50%;}
+  .luma-card .lc-value{font-family:var(--font-mono);font-size:22px;font-weight:600;color:var(--text);}
+
+  /* ---------- graph ---------- */
+  .graph-wrap{padding:10px 12px 12px;}
+  canvas#curveGraph{width:100%;height:150px;display:block;}
+  .legend{display:flex;gap:16px;padding:0 4px;margin-top:8px;flex-wrap:wrap;}
+  .legend-item{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10px;color:var(--text-muted);}
+  .legend-item .swatch{width:12px;height:2px;border-radius:1px;}
+
+  /* ---------- advanced ---------- */
+  .adv-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px;}
+  .adv-grid .field{margin-bottom:0;}
+  .status-line{font-family:var(--font-mono);font-size:10.5px;color:var(--text-dim);display:flex;justify-content:space-between;padding:8px 12px;border-top:1px solid var(--border-soft);background:var(--panel-2);}
+  .status-line b{color:var(--text-muted);font-weight:500;}
+
+  input[type=file]{display:none;}
+
+  @media (max-width:900px){.side-col{flex:1 1 100%;}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <span class="dot"></span>
+    <h1>SafeView</h1>
+    <span class="sub">SafeView Video Player By Vinayak Patel</span>
+  </div>
+  <div class="topbar-actions">
+    <label class="btn primary" for="fileInput">Load Video</label>
+    <input type="file" id="fileInput" accept="video/*" />
+    <div class="topbar-toggle">
+      <label class="switch">
+        <input type="checkbox" id="expPlanningToggle" />
+        <span class="track"></span>
+      </label>
+      <span>Exposure Planning</span>
+    </div>
+    <button class="btn" id="analyzeBtn" disabled style="display:none;">Analyze &amp; Plan</button>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- ============ STAGE COLUMN ============ -->
+  <div class="stage-col">
+
+    <div class="panel">
+      <div class="stage" id="stage">
+        <canvas id="cpuCanvas"></canvas>
+        <canvas id="glCanvas"></canvas>
+        <div class="empty-state" id="emptyState">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <div>Load a video, then run exposure planning</div>
+        </div>
+        <div class="analysis-overlay hidden" id="analysisOverlay">
+          <div class="scan-3x3" id="scan3x3">
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+          </div>
+          <div class="analysis-label">Buffering initial plan — sampling 3×3 @ <span id="analysisSpeedLabel">1</span>×</div>
+          <div class="analysis-progress-track"><div class="analysis-progress-fill" id="analysisProgress"></div></div>
+          <div class="analysis-meta" id="analysisMeta">0 samples</div>
+        </div>
+      </div>
+
+      <div class="transport">
+        <div class="seekbar-row">
+          <span class="time-label" id="curTimeLabel">00:00</span>
+          <div class="seek-wrap">
+            <div class="seek-frontier" id="seekFrontier"></div>
+            <input type="range" class="seek" id="seekBar" min="0" max="1000" value="0" step="1" disabled />
+          </div>
+          <span class="time-label" id="durLabel">00:00</span>
+        </div>
+        <div class="controls-row">
+          <div class="transport-btns">
+            <button class="tbtn" id="restartBtn" title="Restart" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+            </button>
+            <button class="tbtn" id="backBtn" title="Rewind 10s" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"/><polyline points="18 17 13 12 18 7"/></svg>
+            </button>
+            <button class="tbtn play-toggle" id="playBtn" title="Play" disabled>
+              <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+              <svg id="pauseIcon" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="5" y="3" width="5" height="18" rx="1"/><rect x="14" y="3" width="5" height="18" rx="1"/></svg>
+            </button>
+            <button class="tbtn" id="fwdBtn" title="Forward 10s" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+            </button>
+            <button class="tbtn" id="fullscreenBtn" title="Fullscreen" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M21 16v3a2 2 0 0 1-2 2h-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+            <div class="volume-group" id="volumeGroup">
+              <button class="tbtn" id="muteBtn" title="Mute">
+                <svg id="volIconOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 9 8 9 12 5 12 19 8 15 4 15 4 9" fill="currentColor" stroke="none"/><path d="M16 8a5 5 0 0 1 0 8"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+                <svg id="volIconOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><polygon points="4 9 8 9 12 5 12 19 8 15 4 15 4 9" fill="currentColor" stroke="none"/><line x1="16" y1="9" x2="21" y2="14"/><line x1="21" y1="9" x2="16" y2="14"/></svg>
+              </button>
+              <div class="vol-slider-wrap">
+                <input type="range" class="vol" id="volumeSlider" min="0" max="1" step="0.01" value="1" title="Volume" />
+              </div>
+            </div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:10.5px;color:var(--text-dim);" id="planStatus">No plan yet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exposure trajectory graph -->
+    <div class="panel" id="graphPanel" style="display:none;">
+      <div class="panel-head"><h2>Exposure Trajectory</h2><span style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);" id="targetLumaLabel">target — </span></div>
+      <div class="graph-wrap">
+        <canvas id="curveGraph" width="1200" height="300"></canvas>
+        <div class="legend">
+          <div class="legend-item"><span class="swatch" style="background:var(--cyan)"></span>Observed luma</div>
+          <div class="legend-item"><span class="swatch" style="background:var(--amber)"></span>Planned gain (smoothed)</div>
+          <div class="legend-item"><span class="swatch" style="background:var(--text-dim)"></span>Target</div>
+          <div class="legend-item"><span class="swatch" style="background:rgba(255,176,0,0.35)"></span>Planned zone (seek bar)</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ SIDE COLUMN ============ -->
+  <div class="side-col">
+
+    <div class="panel">
+      <div class="tabs">
+        <button class="tab active" data-tab="adjust">Adjust</button>
+        <button class="tab" data-tab="analysis">Luma</button>
+        <button class="tab" data-tab="advanced">Advanced</button>
+      </div>
+
+      <!-- ADJUST TAB -->
+      <div class="panel-body tab-panel" id="tab-adjust">
+        <div class="field">
+          <div class="field-row"><label>Exposure trim</label><span class="val" id="v-exposure">0.0 EV</span></div>
+          <input type="range" class="slider" id="s-exposure" min="-3" max="3" step="0.05" value="0" />
+          <div class="hint">Manual trim applied on top of the planned exposure curve.</div>
+        </div>
+        <div class="field">
+          <div class="field-row"><label>Contrast</label><span class="val" id="v-contrast">0</span></div>
+          <input type="range" class="slider" id="s-contrast" min="-100" max="100" step="1" value="0" />
+        </div>
+        <div class="field">
+          <div class="field-row"><label>Saturation</label><span class="val" id="v-saturation">20</span></div>
+          <input type="range" class="slider" id="s-saturation" min="-100" max="100" step="1" value="20" />
+        </div>
+        <div class="field">
+          <div class="field-row"><label>Sharpness</label><span class="val" id="v-sharpness">0</span></div>
+          <input type="range" class="slider" id="s-sharpness" min="0" max="300" step="1" value="0" />
+        </div>
+        <div class="field">
+          <div class="field-row"><label>Blur</label><span class="val" id="v-blur">0</span></div>
+          <input type="range" class="slider" id="s-blur" min="0" max="300" step="1" value="0" />
+        </div>
+
+        <div class="field" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft);">
+          <div class="field-row"><label>Playback Speed</label><span class="val" id="v-playbackSpeed">1.00×</span></div>
+          <input type="range" class="slider" id="s-playbackSpeed" min="0.25" max="3" step="0.25" value="1" />
+        </div>
+        <div class="field" style="margin-top:16px;">
+          <button class="reset-link" id="resetAdjustBtn">Reset to defaults</button>
+        </div>
+      </div>
+
+      <!-- ANALYSIS TAB -->
+      <div class="panel-body tab-panel" id="tab-analysis" style="display:none;">
+        <div class="hint" id="lumaDisabledHint" style="margin-bottom:14px;">Exposure planning is currently disabled — flip the switch in the toolbar to analyze the clip and auto-adjust exposure over time.</div>
+        <div class="luma-grid">
+          <div class="luma-card">
+            <div class="lc-label"><span class="swatch" style="background:var(--cyan)"></span>Raw luma</div>
+            <div class="lc-value" id="rawLumaVal">—</div>
+          </div>
+          <div class="luma-card">
+            <div class="lc-label"><span class="swatch" style="background:var(--amber)"></span>Resulting luma</div>
+            <div class="lc-value" id="resultLumaVal">—</div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:14px;">
+          <div class="field-row"><label style="color:var(--text-muted);font-size:11px;">Planned gain (current)</label><span class="val" id="curGainVal">—</span></div>
+          <div class="field-row"><label style="color:var(--text-muted);font-size:11px;">Target luminance</label><span class="val" id="curTargetVal">—</span></div>
+          <div class="field-row"><label style="color:var(--text-muted);font-size:11px;">Samples analyzed</label><span class="val" id="sampleCountVal">—</span></div>
+          <div class="field-row"><label style="color:var(--text-muted);font-size:11px;">Outliers excluded</label><span class="val" id="outlierCountVal">—</span></div>
+          <div class="field-row"><label style="color:var(--text-muted);font-size:11px;">Plan frontier</label><span class="val" id="frontierVal">—</span></div>
+        </div>
+      </div>
+
+      <!-- ADVANCED TAB -->
+      <div class="panel-body tab-panel" id="tab-advanced" style="display:none;">
+        <div class="field" style="margin-bottom:14px;">
+          <div class="field-row"><label>Render engine</label></div>
+          <div class="segmented" id="engineToggle">
+            <button data-engine="cpu">Scaled · CPU</button>
+            <button data-engine="gpu" class="active">Native · GPU</button>
+          </div>
+          <div class="hint" id="engineHint">Full native video resolution, single-pass GPU shader with a simplified 2.2 gamma approximation for speed.</div>
+        </div>
+
+        <div class="field" style="margin-bottom:14px;">
+          <div class="field-row"><label>Output resolution</label></div>
+          <select class="dd" id="resPreset">
+            <option value="native" selected>High Quality (Native Video Source)</option>
+            <option value="best">BALANCED QUALITY</option>
+            <option value="nativeScreen">Screen Resolution</option>
+            <option value="7680x4320">8K UHD — 7680×4320</option>
+            <option value="3840x2160">4K UHD — 3840×2160</option>
+            <option value="2560x1440">2K QHD — 2560×1440</option>
+            <option value="1920x1080">1080p — 1920×1080</option>
+            <option value="1280x720" >720p — 1280×720</option>
+            <option value="custom">Custom…</option>
+          </select>
+          <div class="custom-res-row" id="customResRow" style="display:none;">
+            <input type="number" id="customResW" placeholder="Width" min="16" max="7680" value="1920" />
+            <input type="number" id="customResH" placeholder="Height" min="16" max="4320" value="1080" />
+          </div>
+          <div class="hint">Applies to both CPU and GPU engines — the player and canvas resize to match, independent of the source file's native resolution. If the aspect ratio differs from the source, the video is letterboxed (black bars) rather than stretched.</div>
+        </div>
+
+        <div class="adv-grid">
+          <div class="field">
+            <div class="field-row"><label>Analysis speed</label><span class="val" id="v-analysisSpeed">1×</span></div>
+            <input type="range" class="slider" id="s-analysisSpeed" min="1" max="8" step="1" value="1" />
+          </div>
+          <div class="field">
+            <div class="field-row"><label>Outlier σ threshold</label><span class="val" id="v-sigma">1.0σ</span></div>
+            <input type="range" class="slider" id="s-sigma" min="0.5" max="3" step="0.1" value="1.0" />
+          </div>
+          <div class="field">
+            <div class="field-row"><label>Smoothing window</label><span class="val" id="v-smooth">3.00s</span></div>
+            <input type="range" class="slider" id="s-smooth" min="0" max="3" step="0.05" value="3.00" />
+          </div>
+          <div class="field">
+            <div class="field-row"><label>Min gain</label><span class="val" id="v-gainMin">0.10×</span></div>
+            <input type="range" class="slider" id="s-gainMin" min="0.1" max="1" step="0.05" value="0.10" />
+          </div>
+          <div class="field">
+            <div class="field-row"><label>Max gain</label><span class="val" id="v-gainMax">1.00×</span></div>
+            <input type="range" class="slider" id="s-gainMax" min="1" max="6" step="0.1" value="1.0" />
+          </div>
+          <div class="field" id="renderWidthField" style="opacity:0.35;pointer-events:none;">
+            <div class="field-row"><label>Render width</label><span class="val" id="v-renderWidth">640px</span></div>
+            <input type="range" class="slider" id="s-renderWidth" min="320" max="1280" step="32" value="640" />
+          </div>
+          <div class="field">
+            <div class="field-row"><label>Playback start buffer</label><span class="val" id="v-minBuffer">9.0s</span></div>
+            <input type="range" class="slider" id="s-minBuffer" min="4.5" max="30" step="0.5" value="9.0" />
+          </div>
+        </div>
+
+        <div class="hint" style="margin-top:12px;">
+          Playback start buffer is how much of the plan must exist before <b style="color:var(--text-muted);">Play</b> unlocks. Analysis keeps running in the background afterward — set analysis speed above 1× so the plan stays ahead of playback. Seeking past the planned frontier holds the last known gain until analysis catches up.
+        </div>
+
+
+        <div class="field" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft);">
+          <div class="nr-toggle-row">
+            <label>Reduce UI activity</label>
+            <label class="switch">
+              <input type="checkbox" id="perfReduceUI" />
+              <span class="track"></span>
+            </label>
+          </div>
+          <div class="hint">Skips live redraws of the Exposure Trajectory graph and the "planning in background" readouts while analysis runs — sampling and plan computation keep going at full speed underneath, results just appear once ready. Useful on lower-power devices or at high output resolutions.</div>
+        </div>
+
+
+        <!-- ADD NOISE (DITHER/GRAIN) SECTION STARTS -->
+        <div class="field" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft);">
+          <div class="nr-toggle-row">
+            <label>Add Noise (Grain/Dither)</label>
+            <label class="switch">
+              <input type="checkbox" id="addNoiseEnabled" checked />
+              <span class="track"></span>
+            </label>
+          </div>
+          <div class="hint">Adds animated random noise to reduce banding and imperfections.</div>
+          <div class="nr-body" id="addNoiseBody">
+            <div class="field">
+              <div class="field-row"><label>Amount</label><span class="val" id="v-anAmount">1%</span></div>
+              <input type="range" class="slider" id="s-anAmount" min="0" max="100" step="1" value="1" />
+            </div>
+            <div class="field">
+              <div class="field-row"><label>Spatial Scale</label><span class="val" id="v-anScale">1.0px</span></div>
+              <input type="range" class="slider" id="s-anScale" min="0.1" max="10.0" step="0.1" value="1.0" />
+            </div>
+            <div class="field">
+              <div class="field-row"><label>Temporal Speed</label><span class="val" id="v-anTemporal">1%</span></div>
+              <input type="range" class="slider" id="s-anTemporal" min="0" max="100" step="1" value="1" />
+            </div>
+          </div>
+        </div>
+        <!-- ADD NOISE (DITHER/GRAIN) SECTION ENDS -->
+
+
+        <div class="field" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border-soft);">
+          <div class="nr-toggle-row">
+            <label>Noise reduction</label>
+            <label class="switch">
+              <input type="checkbox" id="nrEnabled" />
+              <span class="track"></span>
+            </label>
+          </div>
+          <div class="hint">σ-gated denoise: smooths pixels whose local variation looks like noise, backs off near edges/motion so detail isn't lost. GPU runs a real-time shader pass; CPU runs an equivalent per-frame filter — same controls affect both.</div>
+          <div class="nr-body disabled" id="nrBody">
+            <div class="field">
+              <div class="field-row"><label>Spatial strength</label><span class="val" id="v-nrSpatial">100%</span></div>
+              <input type="range" class="slider" id="s-nrSpatial" min="0" max="100" step="1" value="100" />
+              <div class="hint">Blends each pixel with its 3×3 neighborhood, weighted down wherever local contrast exceeds the σ threshold (an edge) — reduces per-frame grain/speckle.</div>
+            </div>
+            <div class="field">
+              <div class="field-row"><label>Temporal strength</label><span class="val" id="v-nrTemporal">11%</span></div>
+              <input type="range" class="slider" id="s-nrTemporal" min="0" max="100" step="1" value="11" />
+              <div class="hint">Blends each pixel with the previous rendered frame, weighted down when the frame-to-frame change exceeds the σ threshold (motion) — reduces flicker without ghosting moving subjects.</div>
+            </div>
+            <div class="field">
+              <div class="field-row"><label>σ sensitivity</label><span class="val" id="v-nrSigma">1.00σ</span></div>
+              <input type="range" class="slider" id="s-nrSigma" min="0.25" max="3" step="0.05" value="1.0" />
+              <div class="hint">Lower = only near-flat regions get smoothed (safer, less effect). Higher = more texture gets treated as noise (stronger, riskier for fine detail).</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="status-line">
+        <span><b>File</b>&nbsp; <span id="fileNameLabel">none</span></span>
+        <span><b>Render</b>&nbsp; <span id="renderResLabel">—</span></span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/safeview.js"></script>
+
+
+
+<div class="brand" style="text-align: center; width: 100%;" >  
+  <span class="sub" style="text-align: center; width: 100%;">Copyright © 2026 Vinayak Patel. All rights reserved.</span>
+</div>
+
+<br>
+
+</body>
+</html>
